@@ -1,5 +1,51 @@
 // Storage Controller
+const storageController = (function () {
+    return {
+        storeItem: function (item) {
+            let items;
+            if (localStorage.getItem('items') === null) {
+                items = [];
+                items.push(item);
+                localStorage.setItem('items', JSON.stringify(items))
+            } else {
+                items = JSON.parse(localStorage.getItem('items'));
+                items.push(item);
+                localStorage.setItem('items', JSON.stringify(items))
+            }
+        },
+        getItemsFromStorage: function () {
+            let items;
+            if (localStorage.getItem('items') === null) {
+                items = [];
+            } else {
+                items = JSON.parse(localStorage.getItem('items'))
+            }
+            return items;
+        },
+        deleteFromLocalStorage: function (id) {
+            let items = JSON.parse(localStorage.getItem('items'));
+            items.forEach((item, index) => {
+                if (id === item.id) {
+                    items.splice(index, 1);
+                }
+            });
+            localStorage.setItem('items', JSON.stringify(items));
+        },
+        clearAllFromLocalStorage: function () {
+            localStorage.removeItem('items');
+        },
+        updateItemStorage: function (newItem) {
+            let items = JSON.parse(localStorage.getItem('items'));
+            items.forEach((item, index) => {
+                if (newItem.id === item.id) {
+                    items.splice(index, 1, newItem);
 
+                }
+            });
+            localStorage.setItem('items', JSON.stringify(items));
+        }
+    }
+})();
 
 // Item Controller 
 const ItemController = (function () {
@@ -10,7 +56,7 @@ const ItemController = (function () {
     }
 
     const data = {
-        items: [],
+        items: storageController.getItemsFromStorage(),
         currentItem: null,
         totalCalories: 0
     }
@@ -91,13 +137,11 @@ const ItemController = (function () {
             return data;
         }
     }
-
 })();
 
 
 // UI Controller 
 const UIController = (function () {
-
     const UISelectors = {
         itemList: '#item-list',
         addBtn: '.add-btn',
@@ -137,8 +181,6 @@ const UIController = (function () {
             document.querySelector(UISelectors.itemList).insertAdjacentElement('beforeend', li);
 
         },
-
-        // get Item 
         getItemInput: function () {
             return {
                 name: document.querySelector(UISelectors.itemName).value,
@@ -170,7 +212,6 @@ const UIController = (function () {
         },
         updateListItem: function (item) {
             let listItems = document.querySelectorAll(UISelectors.listItems);
-
             // Node list to array
             listItems = Array.from(listItems);
 
@@ -208,14 +249,13 @@ const UIController = (function () {
         // Get selectors
         getSelectors: function () {
             return UISelectors;
-        }
+        },
     }
-
 })();
 
 
 // App Controller 
-const App = (function (ItemController, UIController) {
+const App = (function (ItemController, UIController, storageController) {
 
     // Event Listeners 
     const loadEventListeners = function () {
@@ -234,7 +274,6 @@ const App = (function (ItemController, UIController) {
                 return false;
             }
         });
-
         // Update Button
         document.querySelector(UISelectors.updateBtn).addEventListener('click', updateItem);
 
@@ -246,10 +285,7 @@ const App = (function (ItemController, UIController) {
 
         // clear all button
         document.querySelector(UISelectors.clearAllBtn).addEventListener('click', clearAllItems);
-
-
     }
-
     // add item function 
     function addItem(e) {
         // Get item form UI controller 
@@ -265,9 +301,11 @@ const App = (function (ItemController, UIController) {
             const totalCalories = ItemController.getTotalCalories();
             // add to UI
             UIController.showTotalCalories(totalCalories);
+
+            // storage In localStorage
+            storageController.storeItem(newItem);
             // Clear Inputs
             UIController.clearInput();
-
         }
         e.preventDefault();
 
@@ -275,7 +313,6 @@ const App = (function (ItemController, UIController) {
 
     // Edit icon click 
     const editClick = function (e) {
-
         if (e.target.classList.contains('edit-item')) {
             // get list item id
             const listId = e.target.parentNode.parentNode.id;
@@ -295,6 +332,7 @@ const App = (function (ItemController, UIController) {
     }
     // update item
     const updateItem = function (e) {
+        console.log(3434);
         // get item input
         const input = UIController.getItemInput();
         // update item
@@ -305,8 +343,10 @@ const App = (function (ItemController, UIController) {
         const totalCalories = ItemController.getTotalCalories();
         // add to UI
         UIController.showTotalCalories(totalCalories);
-        UIController.clearEditState();
 
+        // update local storage
+        storageController.updateItemStorage(newInput);
+        UIController.clearEditState();
         e.preventDefault();
     }
 
@@ -322,10 +362,13 @@ const App = (function (ItemController, UIController) {
         const totalCalories = ItemController.getTotalCalories();
         // add to UI
         UIController.showTotalCalories(totalCalories);
+
+        // delete form local storage
+        storageController.deleteFromLocalStorage(currentItem.id);
+
         UIController.clearEditState();
         e.preventDefault();
     }
-    
 
     // Clear All Items
     const clearAllItems = function () {
@@ -336,6 +379,9 @@ const App = (function (ItemController, UIController) {
         const totalCalories = ItemController.getTotalCalories();
         // add to UI
         UIController.showTotalCalories(totalCalories);
+
+        // from Storage
+        storageController.clearAllFromLocalStorage();
 
         // clear from UI
         UIController.removeAllItems();
@@ -355,7 +401,6 @@ const App = (function (ItemController, UIController) {
             if (items.length === 0) {
                 UIController.hideList();
             } else {
-                UIController.showList();
                 // Send Items to UI 
                 UIController.populateItemList(items);
             }
@@ -367,7 +412,7 @@ const App = (function (ItemController, UIController) {
             loadEventListeners();
         }
     }
-})(ItemController, UIController);
+})(ItemController, UIController, storageController);
 
 // Initialize App
 App.init();
